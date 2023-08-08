@@ -1,48 +1,40 @@
 variables:
-    VERSION: 1.0.${CI_PIPELINE_ID}
-    SAST_EXCLUDED_ANALYZERS: "gosec-sast"
+  VERSION: 1.0.${CI_PIPELINE_ID}
+  SAST_EXCLUDED_ANALYZERS: "gosec-sast"
 
 include:
-  - project: 'templates/ci'
-    file: 'DockerInDockerTemplate.yml'
-  - template: Security/SAST.gitlab-ci.yml
-    
+- project: 'templates/ci'
+  file: 'DockerInDockerTemplate.yml'
+- template: Security/SAST.gitlab-ci.yml
+
 stages:
-  - build
-  - test
-  - release
-  - deploy
+- build
+- test
+- release
+- deploy
 
 build-frontend:
   stage: build
   image: docker:20.10.12-dind-rootless
   before_script:
-    - until docker info; do sleep 1; done
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  - until docker info; do sleep 1; done
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-    - cd frontend
-    - >
-      docker build
-      --build-arg VERSION=$VERSION
-      --tag $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA
-      .
-- docker push $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA
+  - cd frontend
+  - >
+    docker build --build-arg VERSION=$VERSION --tag $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA .
+  - docker push $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA
 
 sonarqube-test-front:
   stage: test
   image: sonarsource/sonar-scanner-cli
   script:
-    - cd frontend
-    - >
-      sonar-scanner
-      -Dsonar.projectKey=${PROJECT_KEY_FRONT}
-      -Dsonar.sources=.
-      -Dsonar.host.url=${SONARQUBE_URL}
-      -Dsonar.login=${LOGIN_FRONT}
-      -Dsonar.projectName=13_ZACHITAYLOVFRONT
+  - cd frontend
+  - >
+    sonar-scanner -Dsonar.projectKey=${PROJECT_KEY_FRONT} -Dsonar.sources=. -Dsonar.host.url=${SONARQUBE_URL} -Dsonar.login=${LOGIN_FRONT} -Dsonar.projectName=13_ZACHITAYLOVFRONT
 cache:
-    paths:
-      - .npm/
+  paths:
+  - .npm/
 
 upload-frontend-latest:
   variables:
@@ -50,25 +42,25 @@ upload-frontend-latest:
   image: docker:20.10.12-dind-rootless
   stage: release
   before_script:
-    - until docker info; do sleep 1; done
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  - until docker info; do sleep 1; done
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-    - docker pull $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA
-    - docker tag $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE/frontend:latest
-    - docker push $CI_REGISTRY_IMAGE/frontend:latest
+  - docker pull $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA
+  - docker tag $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE/frontend:latest
+  - docker push $CI_REGISTRY_IMAGE/frontend:latest
   needs:
-   - sonarqube-test-front
+  - sonarqube-test-front
 
 deploy-frontend:
   stage: deploy
   image: alpine/helm:3.9.3
   before_script:
-    - mkdir -p ~/.kube
-    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+  - mkdir -p ~/.kube
+  - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
   script:
-    - cd infrastructure/momo-store-helm ???
-    - helm upgrade --dependency-update --install --atomic -n momo-store momo-store . --set frontend.image.tag=$VERSION --reuse-values
-    - rm ~/.kube/config
+  - cd infrastructure/momo-store-helm ???
+  - helm upgrade --dependency-update --install --atomic -n momo-store momo-store . --set frontend.image.tag=$VERSION --reuse-values
+  - rm ~/.kube/config
   when: manual
   environment:
     name: prod-frontend

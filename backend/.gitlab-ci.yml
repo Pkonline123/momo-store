@@ -1,9 +1,10 @@
+variables:
+  VERSION: 1.0.${CI_PIPELINE_ID}
+  SAST_EXCLUDED_ANALYZERS: "gosec-sast"
+
 include:
 - project: 'templates/ci'
   file: 'DockerInDockerTemplate.yml'
-
-variables:
-  VERSION: 1.0.${CI_PIPELINE_ID}
 
 stages:
 - build
