@@ -1,0 +1,70 @@
+include:
+- project: 'templates/ci'
+  file: 'DockerInDockerTemplate.yml'
+
+variables:
+  VERSION: 1.0.${CI_PIPELINE_ID}
+
+stages:
+- build
+- build_image
+- test
+- release
+#- deploy
+
+build-code-job:
+  stage: build
+  image: golang:1.17
+  variables:
+    GOPATH: $CI_PROJECT_DIR/backend/.go
+    CGO_ENABLED: "0"
+    GIT_DEPTH: "0"
+  before_script:
+  - mkdir -p backend/.go
+  script:
+  - cd backend/cmd/api/
+  - go build .
+  - mkdir -p $CI_PROJECT_DIR/momo-store-${VERSION}
+  - mv api $CI_PROJECT_DIR/momo-store-${VERSION}/
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths:
+    - backend/.go/pkg/mod/
+  artifacts:
+    paths:
+    - momo-store-${VERSION}/api
+
+build-backend-docker:
+  stage: build_image
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+  - mv momo-store-${VERSION}/api backend/
+  - mkdir -p /kaniko/.docker
+  - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+  - >-
+    /kaniko/executor --context ${CI_PROJECT_DIR}/backend --dockerfile ${CI_PROJECT_DIR}/backend/Dockerfile --destination ${CI_REGISTRY_IMAGE}/backend:${VERSION} --build-arg VERSION=${VERSION} --cache=true --cache-copy-layers #magic___^_^___line
+sonarqube-test-back:
+  stage: test
+  image: sonarsource/sonar-scanner-cli
+  script:
+  - cd backend
+  - >
+    sonar-scanner -Dsonar.projectKey=${PROJECT_KEY_BACK} -Dsonar.sources=. -Dsonar.host.url=${SONARQUBE_URL} -Dsonar.login=${LOGIN_BACK} -Dsonar.projectName=13_ZACHITAYLOVBACK
+cache:
+  paths:
+  - .app/
+
+upload-backend-latest:
+  variables:
+    GIT_STRATEGY: none
+  image: docker:20.10.12-dind-rootless
+  stage: release
+  before_script:
+  - until docker info; do sleep 1; done
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+  - docker pull $CI_REGISTRY_IMAGE/backend:$VERSION
+  - docker tag $CI_REGISTRY_IMAGE/backend:$VERSION $CI_REGISTRY_IMAGE/backend:latest
+  - docker push $CI_REGISTRY_IMAGE/backend:latest
