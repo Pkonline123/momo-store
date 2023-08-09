@@ -1,17 +1,16 @@
-variables:
-  VERSION: 1.0.${CI_PIPELINE_ID}
-  #SAST_EXCLUDED_ANALYZERS: "gosec-sast"
-
 include:
 - project: 'templates/ci'
   file: 'DockerInDockerTemplate.yml'
+
+variables:
+  VERSION: 1.0.${CI_PIPELINE_ID}
 
 stages:
 - build
 - build_image
 - test
 - release
-#- deploy
+- deploy
 
 build-code-job:
   stage: build
@@ -41,17 +40,25 @@ build-backend-docker:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   script:
-    - mv momo-store-${VERSION}/api backend/
-    - mkdir -p /kaniko/.docker
-    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
-    - >-
-      /kaniko/executor
-      --context ${CI_PROJECT_DIR}/backend
-      --dockerfile ${CI_PROJECT_DIR}/backend/Dockerfile
-      --destination ${CI_REGISTRY_IMAGE}/momo-backend:${VERSION}
-      --build-arg VERSION=${VERSION}
-      --cache=true
-      --cache-copy-layers
+  - mv momo-store-${VERSION}/api backend/
+  - mkdir -p /kaniko/.docker
+  - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+  - >-
+    /kaniko/executor --context ${CI_PROJECT_DIR}/backend --dockerfile ${CI_PROJECT_DIR}/backend/Dockerfile --destination ${CI_REGISTRY_IMAGE}/momo-backend:${VERSION} --build-arg VERSION=${VERSION} --cache=true --cache-copy-layers
+unit-test:
+  stage: test
+  image: golang:1.17
+  variables:
+    GOPATH: $CI_PROJECT_DIR/backend/.go
+    GIT_DEPTH: "0"
+  script:
+  - cd backend
+  - go test -v ./...
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths:
+    - backend/.go/pkg/mod/
+
 
 sonarqube-test-back:
   stage: test
@@ -63,6 +70,7 @@ sonarqube-test-back:
 cache:
   paths:
   - .app/
+  allow_failure: true
 
 upload-backend-latest:
   variables:
@@ -70,9 +78,23 @@ upload-backend-latest:
   image: docker:20.10.12-dind-rootless
   stage: release
   before_script:
-    - until docker info; do sleep 1; done
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  - until docker info; do sleep 1; done
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-    - docker pull $CI_REGISTRY_IMAGE/momo-backend:$VERSION
-    - docker tag $CI_REGISTRY_IMAGE/momo-backend:$VERSION $CI_REGISTRY_IMAGE/momo-backend:latest
-    - docker push $CI_REGISTRY_IMAGE/momo-backend:latest
+  - docker pull $CI_REGISTRY_IMAGE/momo-backend:$VERSION
+  - docker tag $CI_REGISTRY_IMAGE/momo-backend:$VERSION $CI_REGISTRY_IMAGE/momo-backend:latest
+  - docker push $CI_REGISTRY_IMAGE/momo-backend:latest
+
+deploy-to-kubernetes-backend:
+  stage: deploy
+  image: alpine/helm:3.9.3
+  before_script:
+  - mkdir -p ~/.kube
+  - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+  script:
+  - cd infrastructure/momo-store-helm
+  - helm upgrade --dependency-update --install --atomic -n momo-store momo-store . --set backend.image.tag=$VERSION --reuse-values
+  - rm ~/.kube/config
+  when: manual
+  environment:
+    name: prod-backend

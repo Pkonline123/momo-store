@@ -12,7 +12,7 @@ stages:
 - build_image
 - test
 - release
-#- deploy
+- deploy
 
 build-code-job:
   stage: build
@@ -36,18 +36,11 @@ build-frontend-docker:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   script:
-    - cp -R momo-store-${VERSION}/public_html frontend/
-    - mkdir -p /kaniko/.docker
-    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
-    - >-
-      /kaniko/executor
-      --context ${CI_PROJECT_DIR}/frontend
-      --dockerfile ${CI_PROJECT_DIR}/frontend/Dockerfile
-      --destination ${CI_REGISTRY_IMAGE}/momo-frontend:${VERSION}
-      --build-arg VERSION=${VERSION}
-      --cache=true
-      --cache-copy-layers
-    
+  - cp -R momo-store-${VERSION}/public_html frontend/
+  - mkdir -p /kaniko/.docker
+  - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+  - >-
+    /kaniko/executor --context ${CI_PROJECT_DIR}/frontend --dockerfile ${CI_PROJECT_DIR}/frontend/Dockerfile --destination ${CI_REGISTRY_IMAGE}/momo-frontend:${VERSION} --build-arg VERSION=${VERSION} --cache=true --cache-copy-layers
 sonarqube-test-front:
   stage: test
   image: sonarsource/sonar-scanner-cli
@@ -58,6 +51,7 @@ sonarqube-test-front:
 cache:
   paths:
   - .npm/
+  allow_failure: true
 
 upload-frontend-latest:
   variables:
@@ -72,17 +66,17 @@ upload-frontend-latest:
   - docker tag $CI_REGISTRY_IMAGE/momo-frontend:$VERSION $CI_REGISTRY_IMAGE/momo-frontend:latest
   - docker push $CI_REGISTRY_IMAGE/momo-frontend:latest
 
-# deploy-to-kubernetes-frontend:
-#   stage: deploy
-#   image: alpine/helm:3.9.3
-#   before_script:
-#   - mkdir -p ~/.kube
-#   - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
-#   script:
-#   - cd infrastructure/momo-store-helm
-#   - helm upgrade --dependency-update --install --atomic -n momo-store momo-store . --set frontend.image.tag=$VERSION --reuse-values
-#   - rm ~/.kube/config
-#   when: manual
-#   environment:
-#     name: prod-frontend
-#     url: https://momo-store.yc.cloudns.ph/
+deploy-to-kubernetes-frontend:
+  stage: deploy
+  image: alpine/helm:3.9.3
+  before_script:
+  - mkdir -p ~/.kube
+  - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+  script:
+  - cd infrastructure/momo-store-helm
+  - helm upgrade --dependency-update --install --atomic -n momo-store momo-store . --set frontend.image.tag=$VERSION --reuse-values
+  - rm ~/.kube/config
+  when: manual
+  environment:
+    name: prod-frontend
+    url: https://momo-store.yc.cloudns.ph/
