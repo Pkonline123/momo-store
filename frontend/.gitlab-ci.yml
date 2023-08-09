@@ -40,7 +40,7 @@ build-frontend-docker:
   - mkdir -p /kaniko/.docker
   - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
   - >-
-    /kaniko/executor --context ${CI_PROJECT_DIR}/frontend --dockerfile ${CI_PROJECT_DIR}/frontend/Dockerfile --destination ${CI_REGISTRY_IMAGE}/frontend:${VERSION} --build-arg VERSION=${VERSION} --cache=true --cache-copy-layers #magic___^_^___line #magic___^_^___line #magic___^_^___line #magic___^_^___line
+    /kaniko/executor --context ${CI_PROJECT_DIR}/frontend --dockerfile ${CI_PROJECT_DIR}/frontend/Dockerfile --destination ${CI_REGISTRY_IMAGE}/momo-frontend:${VERSION} --build-arg VERSION=${VERSION} --cache=true --cache-copy-layers #magic___^_^___line
 sonarqube-test-front:
   stage: test
   image: sonarsource/sonar-scanner-cli
@@ -61,9 +61,9 @@ upload-frontend-latest:
   - until docker info; do sleep 1; done
   - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-  - docker pull $CI_REGISTRY_IMAGE/frontend:$VERSION
-  - docker tag $CI_REGISTRY_IMAGE/frontend:$VERSION $CI_REGISTRY_IMAGE/frontend:latest
-  - docker push $CI_REGISTRY_IMAGE/frontend:latest
+  - docker pull $CI_REGISTRY_IMAGE/momo-frontend:$VERSION
+  - docker tag $CI_REGISTRY_IMAGE/momo-frontend:$VERSION $CI_REGISTRY_IMAGE/momo-frontend:latest
+  - docker push $CI_REGISTRY_IMAGE/momo-frontend:latest
 
 # deploy-to-kubernetes-frontend:
 #   stage: deploy
