@@ -36,7 +36,7 @@ build-frontend-docker:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   script:
-  - cp -R momo-store-${VERSION}/public_html frontend/
+    - cp -R momo-store-${VERSION}/public_html frontend/
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     - >-
