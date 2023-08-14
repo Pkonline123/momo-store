@@ -1,0 +1,17 @@
+app:
+  host: momo-store.yc.cloudns.ph
+  backend:
+    name: frontend
+    port: 80
+
+fana:
+  host: fana.yc.cloudns.ph
+  backend:
+    name: momo-store-grafana
+    port: 80
+
+prom:
+  host: prom.yc.cloudns.ph
+  backend:
+    name: momo-store-kube-prometheus-prometheus
+    port: 9090

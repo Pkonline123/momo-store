@@ -1,0 +1,20 @@
+---
+apiVersion: v2
+type: application
+name: momo-store
+description: Momo Store Helm Chart
+
+version: 0.1.0
+appVersion: "latest"
+
+dependencies:
+  - name: backend
+    version: 0.1.0
+  - name: frontend
+    version: 0.1.0
+  - name: kube-prometheus-stack
+    version: 40.3.1
+    repository: https://prometheus-community.github.io/helm-charts
+  - name: loki-stack
+    version: v2.6.1
+    repository: https://grafana.github.io/helm-charts
