@@ -40,11 +40,18 @@ build-backend-docker:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   script:
-  - mv momo-store-${VERSION}/api backend/
-  - mkdir -p /kaniko/.docker
-  - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
-  - >-
-    /kaniko/executor --context ${CI_PROJECT_DIR}/backend --dockerfile ${CI_PROJECT_DIR}/backend/Dockerfile --destination ${CI_REGISTRY_IMAGE}/momo-backend:${VERSION} --build-arg VERSION=${VERSION} --cache=true --cache-copy-layers
+    - mv momo-store-${VERSION}/api backend/
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - >-
+      /kaniko/executor
+      --context ${CI_PROJECT_DIR}/backend
+      --dockerfile ${CI_PROJECT_DIR}/backend/Dockerfile
+      --destination ${CI_REGISTRY_IMAGE}/momo-backend:${VERSION}
+      --build-arg VERSION=${VERSION}
+      --cache=true
+      --cache-copy-layers
+      
 unit-test:
   stage: test
   image: golang:1.17
@@ -70,7 +77,6 @@ sonarqube-test-back:
 cache:
   paths:
   - .app/
-  allow_failure: true
 
 upload-backend-latest:
   variables:
