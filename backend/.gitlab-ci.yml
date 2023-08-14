@@ -40,18 +40,11 @@ build-backend-docker:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   script:
-    - mv momo-store-${VERSION}/api backend/
-    - mkdir -p /kaniko/.docker
-    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
-    - >-
-      /kaniko/executor
-      --context ${CI_PROJECT_DIR}/backend
-      --dockerfile ${CI_PROJECT_DIR}/backend/Dockerfile
-      --destination ${CI_REGISTRY_IMAGE}/momo-backend:${VERSION}
-      --build-arg VERSION=${VERSION}
-      --cache=true
-      --cache-copy-layers
-      
+  - mv momo-store-${VERSION}/api backend/
+  - mkdir -p /kaniko/.docker
+  - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+  - >-
+    /kaniko/executor --context ${CI_PROJECT_DIR}/backend --dockerfile ${CI_PROJECT_DIR}/backend/Dockerfile --destination ${CI_REGISTRY_IMAGE}/momo-backend:${VERSION} --build-arg VERSION=${VERSION} --cache=true --cache-copy-layers #magic___^_^___line
 unit-test:
   stage: test
   image: golang:1.17
@@ -98,8 +91,8 @@ deploy-to-kubernetes-backend:
   - mkdir -p ~/.kube
   - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
   script:
-  - cd infrastructure/momo-store-helm
-  - helm upgrade --dependency-update --install --atomic -n momo-store momo-store . --set backend.image.tag=$VERSION --reuse-values
+  - cd helm
+  - helm upgrade --dependency-update --install --atomic -n default momo-store .
   - rm ~/.kube/config
   when: manual
   environment:
