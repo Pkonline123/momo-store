@@ -11,8 +11,8 @@ terraform {
     bucket     = "momo-back"
     region     = "ru-central1"
     key        = "terraform/terraform.tfstate"
-    access_key = "YCAJEjO5whONIQTFIZZqgzjWV"
-    secret_key = "YCPVjpu0j9GhJ2ck7w_OZNYe5cVsIP8YRLDU37EX"
+    access_key = ""
+    secret_key = ""
 
     skip_region_validation      = true
     skip_credentials_validation = true

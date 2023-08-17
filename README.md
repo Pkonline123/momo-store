@@ -56,7 +56,7 @@ https://cloud.yandex.ru/docs/managed-kubernetes/tutorials/ingress-cert-manager?f
 kubectl create secret generic -n momo-store docker-config-secret --from-file=.dockerconfigjson="/home/user/.docker/config.json" --type=kubernetes.io/dockerconfigjson 
 # устанавливаем приложение, указав версии backend и frontend
 helm dependency build
-helm upgrade --install --atomic -n momo-store momo-store . --set backend.image.tag=latest --set frontend.image.tag=latest
+helm upgrade --install --atomic -n momo-store momo-store .
 
 # смотрим IP load balancer, прописываем А-записи для приложения и мониторинга
 kubectl get svc
@@ -64,5 +64,7 @@ kubectl get svc
 
 ## Monitoring
 
+- [Пельмени](https://momo-store-std-013-20.ru)
+- [Метрики](https://grafana.momo-store-std-013-20.ru)
 - admin / prom-operator
 - включен в состав helm-chart приложения, зависимости прописаны в `helm/Chart.yaml`

@@ -8,7 +8,7 @@ release-to-nexus:
   script:
   - cd helm
   - helm package --dependency-update .
-  - curl --insecure -u $NEXUS_USER:$NEXUS_PASS $NEXUS_HELM_REPO --upload-file *.tgz
+  - curl -u $NEXUS_USER:$NEXUS_PASS $NEXUS_HELM_REPO --upload-file *.tgz
 
 deploy-to-kubernetes:
   stage: deploy
@@ -21,3 +21,4 @@ deploy-to-kubernetes:
   - cd helm
   - helm upgrade --dependency-update --install --atomic -n momo-store momo-store .
   - rm ~/.kube/config
+

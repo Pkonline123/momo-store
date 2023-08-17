@@ -1,10 +1,10 @@
-image:
+image: 
   project: momo-backend
 annotations:
   prometheus.io/path: /metrics
   prometheus.io/port: "8081"
   prometheus.io/scrape: "true"
-replicas: 1
+replicas: 3
 service:
   port: 8081
 environment: production
