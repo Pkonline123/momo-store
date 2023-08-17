@@ -78,4 +78,4 @@ deploy-to-kubernetes-frontend:
   when: manual
   environment:
     name: prod-frontend
-    url: https://momo-store.yc.cloudns.ph/
+    url: https://momo-store-std-013-20.ru/
