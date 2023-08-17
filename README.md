@@ -65,4 +65,3 @@ kubectl get svc
 - [Пельмени](https://momo-store-std-013-20.ru)
 - [Метрики](https://grafana.momo-store-std-013-20.ru)
 - admin / prom-operator
-- включен в состав helm-chart приложения, зависимости прописаны в `helm/Chart.yaml`
