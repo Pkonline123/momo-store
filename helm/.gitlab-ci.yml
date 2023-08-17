@@ -1,0 +1,24 @@
+stages:
+- release
+- deploy
+
+release-to-nexus:
+  stage: release
+  image: alpine/helm:3.9.3
+  script:
+  - cd helm
+  - helm package --dependency-update .
+  - curl -u $NEXUS_USER:$NEXUS_PASS $NEXUS_HELM_REPO --upload-file *.tgz
+
+deploy-to-kubernetes:
+  stage: deploy
+  image: alpine/helm:3.9.3
+  before_script:
+  - mkdir -p ~/.kube
+  - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+  - apk add jq
+  script:
+  - cd helm
+  - helm upgrade --dependency-update --install --atomic -n momo-store momo-store .
+  - rm ~/.kube/config
+

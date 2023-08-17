@@ -1,0 +1,11 @@
+app:
+  host: momo-store-std-013-20.ru
+  backend:
+    name: frontend
+    port: 80
+
+grafana:
+  host: grafana.momo-store-std-013-20.ru
+  backend:
+    name: momo-store-grafana
+    port: 80

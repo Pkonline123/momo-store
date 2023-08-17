@@ -16,3 +16,16 @@ vendor/
 .idea/
 .vscode/
 .DS_Store
+
+frontend/node_modules/
+
+terraform/.terraform
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/secret.tfvars
+terraform/backend.tfvars
+helm/kubeconfig
+helm/Chart.lock
+helm/charts/kube-prometheus-stack-40.3.1.tgz
+helm/charts/loki-stack-2.6.1.tgz
+helm/charts/ingress-nginx-4.2.5.tgz

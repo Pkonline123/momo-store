@@ -1,0 +1,81 @@
+include:
+- template: Security/SAST.gitlab-ci.yml
+- project: 'templates/ci'
+  file: 'DockerInDockerTemplate.yml'
+
+variables:
+  VERSION: 1.0.${CI_PIPELINE_ID}
+  SAST_EXCLUDED_ANALYZERS: "gosec-sast"
+
+stages:
+- build
+- build_image
+- test
+- release
+- deploy
+
+build-code-job:
+  stage: build
+  script:
+  - cd frontend
+  - npm install --cache .npm --prefer-offline
+  - npm run build
+  - mkdir -p ../momo-store-${VERSION}
+  - mv dist ../momo-store-${VERSION}/public_html
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths:
+    - frontend/.npm/
+  artifacts:
+    paths:
+    - momo-store-${VERSION}/public_html
+
+build-frontend-docker:
+  stage: build_image
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+  - cp -R momo-store-${VERSION}/public_html frontend/
+  - mkdir -p /kaniko/.docker
+  - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+  - >-
+    /kaniko/executor --context ${CI_PROJECT_DIR}/frontend --dockerfile ${CI_PROJECT_DIR}/frontend/Dockerfile --destination ${CI_REGISTRY_IMAGE}/momo-frontend:${VERSION} --build-arg VERSION=${VERSION} --cache=true --cache-copy-layers #magic___^_^___line
+sonarqube-test-front:
+  stage: test
+  image: sonarsource/sonar-scanner-cli
+  script:
+  - cd frontend
+  - >
+    sonar-scanner -Dsonar.projectKey=${PROJECT_KEY_FRONT} -Dsonar.sources=. -Dsonar.host.url=${SONARQUBE_URL} -Dsonar.login=${LOGIN_FRONT} -Dsonar.projectName=13_ZACHITAYLOVFRONT
+cache:
+  paths:
+  - .npm/
+
+upload-frontend-latest:
+  variables:
+    GIT_STRATEGY: none
+  image: docker:20.10.12-dind-rootless
+  stage: release
+  before_script:
+  - until docker info; do sleep 1; done
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+  - docker pull $CI_REGISTRY_IMAGE/momo-frontend:$VERSION
+  - docker tag $CI_REGISTRY_IMAGE/momo-frontend:$VERSION $CI_REGISTRY_IMAGE/momo-frontend:latest
+  - docker push $CI_REGISTRY_IMAGE/momo-frontend:latest
+
+deploy-to-kubernetes-frontend:
+  stage: deploy
+  image: alpine/helm:3.9.3
+  before_script:
+  - mkdir -p ~/.kube
+  - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+  script:
+  - cd helm
+  - helm upgrade --dependency-update --install --atomic -n default momo-store .
+  - rm ~/.kube/config
+  when: manual
+  environment:
+    name: prod-frontend
+    url: https://momo-store-std-013-20.ru/
