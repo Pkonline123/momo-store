@@ -46,17 +46,15 @@ terraform apply
 ## Init production
 
 ```
-# создаем базовый namespace
-kubectl create namespace momo-store
 
 # устанавливаем cert-manager и ингресс контролер согласно инструкции
 https://cloud.yandex.ru/docs/managed-kubernetes/tutorials/ingress-cert-manager?from=int-console-help-center-or-nav
 
 # сохраняем креды для docker-registry
-kubectl create secret generic -n momo-store docker-config-secret --from-file=.dockerconfigjson="/home/user/.docker/config.json" --type=kubernetes.io/dockerconfigjson 
+kubectl create secret generic -n default docker-config-secret --from-file=.dockerconfigjson="/home/user/.docker/config.json" --type=kubernetes.io/dockerconfigjson 
 # устанавливаем приложение, указав версии backend и frontend
 helm dependency build
-helm upgrade --install --atomic -n momo-store momo-store .
+helm upgrade --install --atomic -n default momo-store .
 
 # смотрим IP load balancer, прописываем А-записи для приложения и мониторинга
 kubectl get svc
